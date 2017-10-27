@@ -21,8 +21,10 @@ package com.novice.hbdr;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,9 +53,21 @@ public class FriendGroupParser
      */
     public List<Person> parsePersons(File input) throws IOException
     {
+        return parsePersons(new FileInputStream(input));
+    }
+    
+    /**
+     * From the input stream representing a group of friends, parse their data
+     * 
+     * @param input input stream containing information about group of friends
+     * @return  Parsed structured information about everyone in the group
+     * @throws IOException
+     */
+    public List<Person> parsePersons(InputStream input) throws IOException
+    {
         List<Person> persons = new ArrayList<>();
         
-        try(BufferedReader reader = new BufferedReader(new FileReader(input)))
+        try(BufferedReader reader = new BufferedReader(new InputStreamReader(input)))
         {
             String line = null;
             
@@ -81,6 +95,14 @@ public class FriendGroupParser
         //  Name    PetName Day of month    Month   email   Gender
         
         return new Person(fields[0], fields[1], new Birthday(Integer.parseInt(fields[2]), Month.toMonth(fields[3])), fields[4], Gender.toGender(fields[5]));
+    }
+    
+    
+    public static void main(String[] args) throws Exception
+    {
+        File file = new File("/home/satishbabu/birthday_reminder/data/birthdays_friends_strand_extended.tsv");
+        FriendGroupParser parser = new FriendGroupParser();
+        parser.parsePersons(file);
     }
     
 }
