@@ -1,7 +1,7 @@
 /*
  * Birthday.java
  */
-package com.novice.hbdr;
+package com.novice.hbdr.datamodels;
 
 /**
  * Birth day of a person. We take month and specific day of the month for now.

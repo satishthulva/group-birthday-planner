@@ -25,6 +25,9 @@ import javax.mail.internet.MimeMultipart;
 
 import org.jsoup.Jsoup;
 
+import com.novice.hbdr.datamodels.Month;
+import com.novice.hbdr.datamodels.Person;
+
 /**
  * Send birthday reminder email to a group of people, except to the person whose birthday is coming soon, of course.
  * 

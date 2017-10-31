@@ -1,7 +1,7 @@
 /*
  * Gender.java
  */
-package com.novice.hbdr;
+package com.novice.hbdr.datamodels;
 
 /**
  * Persons' gender

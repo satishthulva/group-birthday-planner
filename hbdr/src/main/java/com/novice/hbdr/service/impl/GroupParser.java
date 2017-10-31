@@ -1,7 +1,7 @@
 /*
  * FriendGroupParser.java
  */
-package com.novice.hbdr;
+package com.novice.hbdr.service.impl;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,6 +14,8 @@ import java.util.List;
 
 import com.novice.hbdr.datamodels.Birthday;
 import com.novice.hbdr.datamodels.Gender;
+import com.novice.hbdr.datamodels.Group;
+import com.novice.hbdr.datamodels.GroupID;
 import com.novice.hbdr.datamodels.Month;
 import com.novice.hbdr.datamodels.Person;
 
@@ -22,7 +24,7 @@ import com.novice.hbdr.datamodels.Person;
  * 
  * @author satishbabu
  */
-public class FriendGroupParser
+public class GroupParser
 {
     /**
      * Comment lines in the input line should start with this
@@ -40,36 +42,57 @@ public class FriendGroupParser
      * @return  Parsed structured information about everyone in the group
      * @throws IOException
      */
-    public List<Person> parsePersons(File input) throws IOException
+    public Group parsePersons(File input) throws IOException
     {
         return parsePersons(new FileInputStream(input));
     }
     
     /**
-     * From the input stream representing a group of friends, parse their data
+     * <pre>
+     * From the input stream representing a group of friends, parse their data.
      * 
+     * Expected format.
+     * 
+     * Comment lines first which start with #
+     * 
+     * GroupId on a separate line next
+     * 
+     * Group name on a separate line next
+     * 
+     * Group members one each on a new line
+     * 
+     * </pre>
      * @param input input stream containing information about group of friends
      * @return  Parsed structured information about everyone in the group
      * @throws IOException
      */
-    public List<Person> parsePersons(InputStream input) throws IOException
+    public Group parsePersons(InputStream input) throws IOException
     {
+    	GroupID groupID = null;
+    	String groupName = null;
         List<Person> persons = new ArrayList<>();
         
         try(BufferedReader reader = new BufferedReader(new InputStreamReader(input)))
         {
             String line = null;
             
+            while((line = reader.readLine()) != null && line.startsWith(COMMENT_PREFIX));
+            
+            // group id
+            line = reader.readLine();
+            groupID = new GroupID(line.trim());
+            
+            // group name
+            line = reader.readLine();
+            groupName = line.trim();
+            
             while((line = reader.readLine()) != null)
-            {
-                if(line.startsWith(COMMENT_PREFIX))
-                    continue;
-                
+            {                
                 persons.add(parsePersonFromLine(line));
             }
         }
         
-        return persons;
+        return new Group(groupID, groupName, persons);
     }
     
     /**
@@ -90,7 +113,7 @@ public class FriendGroupParser
     public static void main(String[] args) throws Exception
     {
         File file = new File("/home/satishbabu/birthday_reminder/data/birthdays_friends_strand_extended.tsv");
-        FriendGroupParser parser = new FriendGroupParser();
+        GroupParser parser = new GroupParser();
         parser.parsePersons(file);
     }
     

@@ -4,6 +4,11 @@
 package com.novice.hbdr.web;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
+import com.novice.hbdr.Configuration;
+import com.novice.hbdr.service.GroupService;
+import com.novice.hbdr.service.impl.ConfigurationImpl;
+import com.novice.hbdr.service.impl.GroupServiceImpl;
 
 /**
  * Wirings to build the whole application
@@ -18,7 +23,7 @@ public class EngineModule extends AbstractModule
     @Override
     protected void configure()
     {
-        // TODO Auto-generated method stub
-        
+        bind(Configuration.class).to(ConfigurationImpl.class).in(Scopes.SINGLETON);
+        bind(GroupService.class).to(GroupServiceImpl.class).in(Scopes.SINGLETON);
     }
 }
