@@ -79,7 +79,6 @@ public class GroupParser
             while((line = reader.readLine()) != null && line.startsWith(COMMENT_PREFIX));
             
             // group id
-            line = reader.readLine();
             groupID = new GroupID(line.trim());
             
             // group name
