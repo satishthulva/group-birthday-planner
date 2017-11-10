@@ -25,6 +25,11 @@ public class Group {
 	 */
 	private List<Person> members = new ArrayList<>();
 
+	/**
+	 * Number of days in advance to send reminder
+	 */
+	private int reminderPeriodInDays = -1;
+	
 	public Group(GroupID groupID, String name, List<Person> members) {
 		super();
 		this.id = groupID;
@@ -51,6 +56,13 @@ public class Group {
 	 */
 	public List<Person> getMembers() {
 		return members;
+	}
+
+	/**
+	 * @return the reminderPeriodInDays
+	 */
+	public int getReminderPeriodInDays() {
+		return reminderPeriodInDays;
 	}
 	
 }

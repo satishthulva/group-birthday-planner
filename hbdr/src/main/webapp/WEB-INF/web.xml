@@ -9,6 +9,10 @@
    	<listener>
         <listener-class>com.novice.hbdr.web.AppConfigurationManager</listener-class>
     </listener>
+
+   	<listener>
+        <listener-class>com.novice.hbdr.web.NotificationServiceContextListener</listener-class>
+    </listener>
     
     <filter>
         <filter-name>guiceFilter</filter-name>

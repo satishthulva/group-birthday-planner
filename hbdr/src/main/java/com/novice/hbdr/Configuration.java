@@ -2,6 +2,8 @@ package com.novice.hbdr;
 
 import java.io.File;
 
+import javax.mail.Session;
+
 /**
  * Settings for the app
  * 
@@ -15,5 +17,17 @@ public interface Configuration {
 	 * @return	the folder containing the friend groups file
 	 */
 	File findStorageRoot();
+
+	/**
+	 * Find and return proxy class to {@link Session}
+	 * @return Mailer
+	 */
+	Mailer getMailer();
+	
+	/**
+	 * Reminder mail will be sent in these many days in advance
+	 * @return	Reminder mail will be sent in these many days in advance
+	 */
+	int findDefaultReminderPeriod();
 	
 }

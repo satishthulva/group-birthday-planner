@@ -6,6 +6,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import com.novice.hbdr.Configuration;
+import com.novice.hbdr.Mailer;
 
 /**
  * Implements {@link Configuration}
@@ -18,6 +19,14 @@ public class ConfigurationImpl implements Configuration {
 	 * the folder containing the friend groups file
 	 */
 	private File storageRoot;
+	/**
+	 * Mailing handler
+	 */
+	private Mailer mailer = Mailer.createMailer();
+	/**
+	 * Reminder mail will be sent in these many days in advance
+	 */
+	private int defaultReminderPeriodDays;
 	
 	public ConfigurationImpl() {
 		initialize();
@@ -28,8 +37,12 @@ public class ConfigurationImpl implements Configuration {
 	 */
 	private void initialize() {
 		try {
-			String fileName = InitialContext.doLookup("java:comp/env/param/Storageroot");
+			InitialContext initialContext = new InitialContext();
+			
+			String fileName = (String)initialContext.lookup("java:comp/env/param/Storageroot");
 			this.storageRoot = new File(fileName);
+			
+			this.defaultReminderPeriodDays = (Integer)initialContext.lookup("java:comp/env/param/DefaultReminderDays");
 		} catch(NamingException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e.getMessage(), e);
@@ -39,6 +52,22 @@ public class ConfigurationImpl implements Configuration {
 	@Override
 	public File findStorageRoot() {
 		return storageRoot;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.novice.hbdr.Configuration#getMailer()
+	 */
+	@Override
+	public Mailer getMailer() {
+		return mailer;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.novice.hbdr.Configuration#findDefaultReminderPeriod()
+	 */
+	@Override
+	public int findDefaultReminderPeriod() {
+		return defaultReminderPeriodDays;
 	}
 	
 }
