@@ -3,14 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <title>Personalized greeting !</title>
-</head>
-<body>
- 
- <form action="rest/v1/hbdr/newGroup" enctype="multipart/form-data" method="post">
- 	<input type="file" name="groupFile">
- 	<input type="text" name="name">
- 	<input type="submit" value="Register !">
- </form>
 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular.js"></script>
+<script src="app/app.js"></script>
+
+</head>
+<body ng-app="app" ng-controller="appController" style="margin-left: 10px">
+ 
+<!--  Register a new group -->
+ <div style="width: 50%" class="well">
+ 	<h2>Register your friend group!</h2>
+	 <form action="rest/v1/hbdr/newGroup" enctype="multipart/form-data" method="post">
+	 	
+	 	<div class = "form-group">
+		 	<label>Group Name</label>
+		 	<input type="text" name="name" class="form-control">
+	 	</div>
+
+		<div class="form-group">
+		 	<label>Friends details</label>
+		 	<input type="file" name="groupFile">
+		</div>
+
+	 	<input type="submit" value="Register !" class="btn btn-success">
+	 </form>
+ </div>
+
+<!-- List of all groups -->
+<div>
+	<h2>Number of groups : {{groups.length}}</h2>
+	 <div ng-repeat="group in groups" class="well well-sm" style="width: 50%">
+	 	<div>
+	 		<span><b>{{group.name}}</b></span>
+	 		<li ng-repeat="person in group.members">{{person.name}}</li>
+	 	</div>
+	 </div>
+ </div>
 </body>
 </html>
