@@ -46,4 +46,12 @@ public class Birthday
         return month;
     }
     
+    /*
+     * (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    public String toString() {
+    	return dayOfMonth + " " + month.name();
+    }
+    
 }

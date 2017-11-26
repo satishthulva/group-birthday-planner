@@ -8,47 +8,14 @@ import java.util.List;
  * 
  * @author satish
  */
-public class Group {
-
-	/**
-	 * Unique id for the group
-	 */
-	private GroupID id;
-	
-	/**
-	 * Name to address the group
-	 */
-	private String name;
-	
+public class Group extends GroupDetails {
 	/**
 	 * Members part of the group
 	 */
 	private List<Person> members = new ArrayList<>();
-
-	/**
-	 * Number of days in advance to send reminder
-	 */
-	private int reminderPeriodInDays = -1;
-	
-	public Group(GroupID groupID, String name, List<Person> members) {
-		super();
-		this.id = groupID;
-		this.name = name;
+	public Group(GroupID groupID, String name, int reminderPeriodInDays, List<Person> members) {
+		super(groupID, name, reminderPeriodInDays);
 		this.members = members;
-	}
-
-	/**
-	 * @return the id
-	 */
-	public GroupID getId() {
-		return id;
-	}
-
-	/**
-	 * @return the name
-	 */
-	public String getName() {
-		return name;
 	}
 
 	/**
@@ -56,13 +23,6 @@ public class Group {
 	 */
 	public List<Person> getMembers() {
 		return members;
-	}
-
-	/**
-	 * @return the reminderPeriodInDays
-	 */
-	public int getReminderPeriodInDays() {
-		return reminderPeriodInDays;
 	}
 	
 }

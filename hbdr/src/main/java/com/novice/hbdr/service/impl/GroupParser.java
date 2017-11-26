@@ -91,7 +91,7 @@ public class GroupParser
             }
         }
         
-        return new Group(groupID, groupName, persons);
+        return new Group(groupID, groupName, -1, persons);
     }
     
     /**

@@ -3,7 +3,9 @@ package com.novice.hbdr.service.impl;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.mail.Address;
 import javax.mail.Message;
@@ -23,6 +25,7 @@ import org.jsoup.Jsoup;
 import com.google.inject.Inject;
 import com.novice.hbdr.Configuration;
 import com.novice.hbdr.datamodels.Group;
+import com.novice.hbdr.datamodels.GroupDetails;
 import com.novice.hbdr.datamodels.GroupID;
 import com.novice.hbdr.datamodels.Month;
 import com.novice.hbdr.datamodels.Person;
@@ -378,6 +381,76 @@ public class NotificationService implements Runnable {
 		return mbp;
 	}
 
+	/**
+	 * Find all the people with upcoming birthdays
+	 * @return	all the people with upcoming birthdays
+	 */
+	public Map<GroupDetails, List<Person>> findPeopleWithUpcomingBirthday() {
+		List<Group> groups = groupService.findGroups();
+		int defaultReminderConfig = configuration.findDefaultReminderPeriod();
+		
+		Map<GroupDetails, List<Person>> personsMap = new HashMap<>();
+		
+		for(Group group : groups) {
+			int birthDayReminderDays = group.getReminderPeriodInDays() != -1 ? group.getReminderPeriodInDays() : defaultReminderConfig;
+			for(Person person : group.getMembers()) {
+				if(isPersonBirthdayWithInReminderPeriod(person, birthDayReminderDays)) {
+					List<Person> groupMembers = personsMap.get(group);
+					if(groupMembers == null) {
+						groupMembers = new ArrayList<>();
+						personsMap.put(group, groupMembers);
+					}
+					groupMembers.add(person);
+				}
+			}
+		}
+		
+		return personsMap;
+	}
+
+	/**
+	 * Find out whether it's given persons' birthday in less than <code>reminderPeriodInDays</code> days.
+	 * 
+	 * @param person	Person of interest
+	 * @param reminderPeriodInDays	Number of days in advance to the persons' birthday
+	 *            NOTE : there is an assumption that it won't be more than 27
+	 *            days
+	 * 
+	 * @return <code>true</code>, if it's given persons' birthday in less than
+	 *         <code>reminderPeriodInDays</code> days. <code>false</code>,
+	 *         otherwise
+	 */
+	private boolean isPersonBirthdayWithInReminderPeriod(Person person, int reminderPeriodInDays) {
+		Calendar todayC = Calendar.getInstance();
+
+		Calendar birthdayC = Calendar.getInstance();
+		birthdayC.set(Calendar.MONTH, person.getBirthday().getMonth().ordinal());
+		birthdayC.set(Calendar.DAY_OF_MONTH, person.getBirthday().getDayOfMonth());
+
+		if (!todayC.before(birthdayC))
+			return false;
+
+		int todayMonth = todayC.get(Calendar.MONTH);
+		int bdayMonth = birthdayC.get(Calendar.MONTH);
+
+		int monthDiff = bdayMonth - todayMonth;
+
+		if (monthDiff > 1)
+			return false;
+
+		int daysLeftTillBDay = 0;
+
+		if (monthDiff == 0) {
+			daysLeftTillBDay = birthdayC.get(Calendar.DAY_OF_MONTH) - todayC.get(Calendar.DAY_OF_MONTH);
+		} else {
+			daysLeftTillBDay = Month.values()[todayMonth].getNumberOfDaysInMonth(todayC.get(Calendar.YEAR))
+					- todayC.get(Calendar.DAY_OF_MONTH) + 1;
+			daysLeftTillBDay += birthdayC.get(Calendar.DAY_OF_MONTH) - 1;
+		}
+
+		return daysLeftTillBDay >=0 && daysLeftTillBDay <= reminderPeriodInDays;
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -389,7 +462,8 @@ public class NotificationService implements Runnable {
 			sendNotification();
 
 			try {
-				Thread.sleep(1000 * 60 * 15);// sleep for 15 minutes and send reminder
+				Thread.sleep(1000 * 60 * 15);// sleep for 15 minutes and send
+												// reminder
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
