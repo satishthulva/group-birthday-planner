@@ -19,8 +19,10 @@ public interface GroupService {
 	 * 
 	 * @param name		Name to address the group
 	 * @param members	Members of the group
+	 * 
+	 * @return unique id generated for the group
 	 */
-	void registerGroup(String name, List<Person> members);
+	GroupID registerGroup(String name, List<Person> members);
 	
 	/**
 	 * Find friends group with given unique id

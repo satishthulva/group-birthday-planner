@@ -76,6 +76,20 @@
         <scope>provided</scope>
     </dependency>
     
+    <!-- https://mvnrepository.com/artifact/org.elasticsearch.client/elasticsearch-rest-high-level-client -->
+	<dependency>
+	    <groupId>org.elasticsearch.client</groupId>
+	    <artifactId>elasticsearch-rest-high-level-client</artifactId>
+	    <version>6.0.0</version>
+	</dependency>
+
+	<dependency>
+	    <groupId>org.elasticsearch.client</groupId>
+	    <artifactId>elasticsearch-rest-high-level-client</artifactId>
+	    <version>6.0.0</version>
+	    <classifier>sources</classifier>
+	</dependency>
+    
   </dependencies>
   
   <build>

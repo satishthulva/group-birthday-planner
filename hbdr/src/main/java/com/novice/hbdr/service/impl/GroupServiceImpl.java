@@ -41,7 +41,7 @@ public class GroupServiceImpl implements GroupService {
 	 * java.util.List)
 	 */
 	@Override
-	public void registerGroup(String name, List<Person> members) {
+	public GroupID registerGroup(String name, List<Person> members) {
 		GroupID groupID = generateNewGroupID();
 		File groupFile = new File(configuration.findStorageRoot(), groupID.getId());
 
@@ -86,6 +86,7 @@ public class GroupServiceImpl implements GroupService {
 			e.printStackTrace();
 			throw new RuntimeException(e.getMessage(), e);
 		}
+		return groupID;
 	}
 
 	/*
