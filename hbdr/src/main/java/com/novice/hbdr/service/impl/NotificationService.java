@@ -1,11 +1,13 @@
 package com.novice.hbdr.service.impl;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.mail.Address;
 import javax.mail.Message;
@@ -42,6 +44,11 @@ public class NotificationService implements Runnable {
 
 	private final Configuration configuration;
 
+	/**
+	 * Stores the date when the last reminder sending attempt was made, for each group
+	 */
+	private final Map<GroupID, String> lastReminderRunDate = new ConcurrentHashMap<>();
+	
 	@Inject
 	public NotificationService(GroupService groupService, Configuration configuration) {
 		this.groupService = groupService;
@@ -66,8 +73,9 @@ public class NotificationService implements Runnable {
 	 *         or not ?
 	 */
 	private boolean isNotifierRunForDay(Date date, GroupID groupID) {
-		// TODO : read the data from cache or persistent store
-		return false;
+	    String runDate = lastReminderRunDate.get(groupID);
+	    String currentDate = toDateString(date);
+	    return currentDate.equals(runDate);
 	}
 
 	/**
@@ -79,7 +87,8 @@ public class NotificationService implements Runnable {
 	 *            Unique id of the group
 	 */
 	private void registerNotifierRunForDay(Date date, GroupID groupID) {
-		// TODO : write the data to cache or persistent store
+		String dateString = toDateString(date);
+		lastReminderRunDate.put(groupID, dateString);
 	}
 
 	/**
@@ -477,4 +486,19 @@ public class NotificationService implements Runnable {
 		this.isShutdown = true;
 	}
 
+	/**
+	 * Return the string representation of day in the format YYYY-MM-DD
+	 * @param date date representing a time instant
+	 * @return the string representation of day in the format YYYY-MM-DD
+	 */
+	private String toDateString(Date date)
+	{
+	    Calendar calendar = Calendar.getInstance();
+	    calendar.setTime(date);
+	    
+	    SimpleDateFormat format = new SimpleDateFormat("YYYY-MM-DD");
+	    
+	    return format.format(date);
+	}
+	
 }
