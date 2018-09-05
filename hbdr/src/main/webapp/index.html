@@ -11,18 +11,8 @@
 </head>
 <body ng-app="app" ng-controller="appController" style="margin-left: 10px">
  
-<div class="row-fluid">
-	<!-- List of all groups -->
-	<div class="col-xs-6">
-		<h2># groups : {{groups.length}}</h2>
-		 <div ng-repeat="group in groups" class="well well-sm">
-		 	<div>
-		 		<span><b>{{group.name}}</b></span>
-		 		<li ng-repeat="person in group.members">{{person.name}}</li>
-		 	</div>
-		 </div>
-	 </div>
-	 
+<div class="row-fluid">	 
+
 	<!--  Birthdays today -->
 	<div class="col-xs-6">
 		<h2>Upcoming birthdays</h2>
@@ -43,6 +33,18 @@
 			</table>	
 		</div>
 	</div>
+	
+	<!-- List of all groups -->
+	<div class="col-xs-6">
+		<h2># groups : {{groups.length}}</h2>
+		 <div ng-repeat="group in groups" class="well well-sm">
+		 	<div>
+		 		<span><b>{{group.name}}</b></span>
+		 		<li ng-repeat="person in group.members">{{person.name}}</li>
+		 	</div>
+		 </div>
+	 </div>
+
 </div>
 
 <div class="row-fluid">
@@ -66,4 +68,5 @@
 	 </div>
 </div>
 </body>
+
 </html>
