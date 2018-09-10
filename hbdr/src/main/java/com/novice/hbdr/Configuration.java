@@ -1,6 +1,7 @@
 package com.novice.hbdr;
 
 import java.io.File;
+import java.sql.Connection;
 
 import javax.mail.Session;
 
@@ -29,5 +30,11 @@ public interface Configuration {
 	 * @return	Reminder mail will be sent in these many days in advance
 	 */
 	int findDefaultReminderPeriod();
+	
+	/**
+	 * Connection for database
+	 * @return	Connection for database
+	 */
+	Connection getDatabaseConnection();
 	
 }
