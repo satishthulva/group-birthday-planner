@@ -40,6 +40,7 @@ import com.novice.hbdr.datamodels.Group;
 import com.novice.hbdr.datamodels.GroupDetails;
 import com.novice.hbdr.datamodels.GroupID;
 import com.novice.hbdr.datamodels.Person;
+import com.novice.hbdr.datamodels.UserID;
 import com.novice.hbdr.service.GroupService;
 import com.novice.hbdr.service.UserManagementService;
 import com.novice.hbdr.service.impl.NotificationService;
@@ -80,8 +81,11 @@ public class EndPoint {
 		try {
 			FriendGroupParser parser = new FriendGroupParser();
 			List<Person> people = parser.parsePersons(groupFile);
-
-			groupService.registerGroup(groupName, people);
+			List<UserID> members = new ArrayList<>();
+			for(Person person : people)
+			    members.add(new UserID(person.getEmail()));
+			
+			groupService.registerGroup(groupName, members, 4);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new WebApplicationException(e, Status.INTERNAL_SERVER_ERROR);
