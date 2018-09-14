@@ -8,9 +8,11 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -96,13 +98,28 @@ public class EndPoint {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Group> listGroups() {
-		return groupService.findGroups();
+	    UserID userID = getCurrentUser();
+	    
+	    List<Group> groups = new ArrayList<>();
+	    for(GroupDetails groupDetails : groupService.findGroups(userID))
+	    {
+	        Group group = groupService.findGroup(groupDetails.getId());
+	        groups.add(group);
+	    }
+	    
+		return groups;
 	}
 
 	@Path("/upcomingBirthDays")
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<PersonDTO> findPeopleWithUpcomingBirthday() {
+	    UserID userID = getCurrentUser();
+	    
+	    Set<GroupID> userGroups = new HashSet<>();
+	    for(GroupDetails groupDetails : groupService.findGroups(userID))
+	        userGroups.add(groupDetails.getId());
+	    
 		Map<GroupDetails, List<Person>> personsMap = notificationService.findPeopleWithUpcomingBirthday();
 
 		List<PersonDTO> persons = new ArrayList<>();
@@ -111,6 +128,9 @@ public class EndPoint {
 			GroupDetails groupDetails = groupEntry.getKey();
 			List<Person> people = groupEntry.getValue();
 
+			if(!userGroups.contains(groupDetails.getId()))
+			    continue;
+			
 			String groupName = groupDetails.getName();
 			GroupID groupID = groupDetails.getId();
 
@@ -146,11 +166,11 @@ public class EndPoint {
 
 				// Get profile information from payload
 				String email = payload.getEmail();
-				boolean emailVerified = Boolean.valueOf(payload.getEmailVerified());
+//				boolean emailVerified = Boolean.valueOf(payload.getEmailVerified());
 				String name = (String) payload.get("name");
-				String pictureUrl = (String) payload.get("picture");
-				String locale = (String) payload.get("locale");
-				String familyName = (String) payload.get("family_name");
+//				String pictureUrl = (String) payload.get("picture");
+//				String locale = (String) payload.get("locale");
+//				String familyName = (String) payload.get("family_name");
 				String givenName = (String) payload.get("given_name");
 				
 				Person person = new Person(name, givenName, null, email, null);
@@ -165,8 +185,11 @@ public class EndPoint {
 				}
 				
 				session = request.getSession(true);
-				Cookie cookie = new Cookie("userID", email);
+				Cookie cookie = new Cookie(USER_KEY, email);
 				response.addCookie(cookie);
+				
+				session.setAttribute(USER_KEY, new UserID(email));
+				
 			} else {
 				System.out.println("Invalid ID token.");
 			}
@@ -175,4 +198,18 @@ public class EndPoint {
 		}
 	}
 
+	/**
+	 * Find the user for whom this session is created
+	 * @return the user for whom this session is created
+	 */
+    private UserID getCurrentUser()
+	{
+	    return (UserID)request.getSession().getAttribute("userID");
+	}
+	
+	/**
+	 * Session attribute name to keep the loggedIn user info
+	 */
+	private final String USER_KEY = "userID";
+	
 }

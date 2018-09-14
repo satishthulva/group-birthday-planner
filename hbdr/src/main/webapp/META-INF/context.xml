@@ -3,7 +3,7 @@
 <Context reloadable="true" antiJARLocking="true" crossContext="false" cookies="true">
 
 <!-- 	Storage root which stores friend groups files -->
-	<Environment name="param/Storageroot" value="/home/satish/projects/hbdr/friendGroups" type="java.lang.String" override="false" />
+	<Environment name="param/Storageroot" value="/home/satishbabu/birthday_reminder/test_data" type="java.lang.String" override="false" />
 	
 <!-- 	Reminder mail will be sent in these many days in advance -->
 	<Environment name="param/DefaultReminderDays" value="4" type="java.lang.Integer" override="false" />

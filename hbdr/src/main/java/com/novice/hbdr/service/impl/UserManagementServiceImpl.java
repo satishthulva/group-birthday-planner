@@ -1,13 +1,18 @@
 package com.novice.hbdr.service.impl;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.inject.Inject;
+import com.novice.hbdr.Configuration;
 import com.novice.hbdr.datamodels.Birthday;
 import com.novice.hbdr.datamodels.Gender;
+import com.novice.hbdr.datamodels.Group;
 import com.novice.hbdr.datamodels.Person;
 import com.novice.hbdr.datamodels.UserID;
 import com.novice.hbdr.service.UserManagementService;
@@ -20,6 +25,55 @@ import com.novice.hbdr.service.UserManagementService;
 public class UserManagementServiceImpl implements UserManagementService {
 
 	private Map<UserID, Person> personMap = new ConcurrentHashMap<>();
+	
+	@Inject
+	public UserManagementServiceImpl(Configuration configuration)
+	{
+	    initCache(configuration);
+	}
+	
+	/**
+	 * Initialize the user info reading data from persistent storage
+	 * @param configuration
+	 */
+	private void initCache(Configuration configuration)
+	{
+	    for(Group group : findGroupsFromPersistentStorage(configuration))
+	    {
+	        for(Person person : group.getMembers())
+	        {
+	            UserID userID = new UserID(person.getEmail());
+	            personMap.put(userID, person);
+	        }
+	    }
+	}
+	
+   /**
+     * Method to return groups data from perstistent storage
+     * @return groups data from perstistent storage
+     */
+    private List<Group> findGroupsFromPersistentStorage(Configuration configuration)
+    {
+           List<Group> groups = new ArrayList<>();
+            
+            File[] files = configuration.findStorageRoot().listFiles();
+            if(files == null || files.length == 0)
+                return groups;
+            
+            GroupParser parser = new GroupParser();
+            
+            try {
+                for(File file : files) {
+                    Group group = parser.parsePersons(file);
+                    groups.add(group);
+                }
+                
+                return groups;
+            } catch(IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e.getMessage(), e);
+            }
+    }
 	
 	@Override
 	public void registerUser(Person person) {
@@ -72,7 +126,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         Person oldPerson = personMap.get(userID);
         String email = oldPerson.getEmail();
         Person newPerson = new Person(name, petName, birthday, email, gender);
-        personMap.put(userID, newPerson); // TODO : the problem here --> how to update the person data that is stored with the group
+        personMap.put(userID, newPerson);
     }
 	
 }

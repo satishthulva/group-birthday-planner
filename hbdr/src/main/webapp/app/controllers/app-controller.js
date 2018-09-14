@@ -29,7 +29,7 @@
 				  headers: {
 				    'Content-Type': 'application/x-www-form-urlencoded' // Note the appropriate header
 				  }
-				}).then(function(response) { console.log('LoggedIn') });
+				}).then(function(response) { init(); console.log('LoggedIn') });
 		}
 		
 		window.onSignIn = onSignIn;
