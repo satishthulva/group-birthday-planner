@@ -1,6 +1,6 @@
 # group birthday planner
 Birthday planner for groups. Provide birthdays of all people with in a closely knit group in a file. When a persons' birthday is approaching, groupbirthdayplanner will send a reminder email to all of his/her friends.
 
-Java based Webapp. Backend is being developed. UI is also very basic now. Still early days. Functionality is there to register a group and send notification.
+Java based Webapp. Backend is being developed. UI is also very basic now. Still early days. Functionality is there to register a group and send notification. Google sign-in integration is done.
 
 Right now, there's facility to send a reminder email only. The plan is to exapnd this into a full-pledged planner. Starting with what gift to give, plan the day etc.
