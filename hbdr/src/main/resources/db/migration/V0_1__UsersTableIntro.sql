@@ -1,11 +1,4 @@
-CREATE DATABASE planner_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-GRANT ALL PRIVILEGES ON planner_db.* to planner@localhost IDENTIFIED BY 'planner@27@';
-
-USE planner_db;
-
-/* Information of users in the system */
-CREATE TABLE IF NOT EXISTS user_registry(
+CREATE TABLE IF NOT EXISTS ${planner_db}.user_registry(
 /* unique id for the user, system generated */
 user_id VARCHAR(64) NOT NULL,
 /* first name of the user */

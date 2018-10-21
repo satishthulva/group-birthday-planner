@@ -13,6 +13,10 @@
     <guiceVersion>3.0</guiceVersion>
     <jerseyGuiceVersion>1.19.4</jerseyGuiceVersion>
     <jersey.version>1.19.4</jersey.version>
+    <hikaricp.version>3.1.0</hikaricp.version>
+    <jdbi.version>3.5.1</jdbi.version>
+    <flyway.version>5.2.0</flyway.version>
+    <mysqlj.version>8.0.12</mysqlj.version>
   </properties>
   
   <dependencies>
@@ -107,7 +111,33 @@
 	    <version>6.0.0</version>
 	    <classifier>sources</classifier>
 	</dependency>
-  
+
+	<dependency>
+        <groupId>com.zaxxer</groupId>
+        <artifactId>HikariCP</artifactId>
+        <version>${hikaricp.version}</version>
+    </dependency>
+	<dependency>
+	    <groupId>org.jdbi</groupId>
+	    <artifactId>jdbi3-core</artifactId>
+	    <version>${jdbi.version}</version>
+	</dependency>
+	<dependency>
+	    <groupId>org.jdbi</groupId>
+	    <artifactId>jdbi3-sqlobject</artifactId>
+	    <version>${jdbi.version}</version>
+	</dependency>
+	<dependency>
+	    <groupId>org.flywaydb</groupId>
+	    <artifactId>flyway-core</artifactId>
+	    <version>${flyway.version}</version>
+	</dependency>
+	<dependency>
+	    <groupId>mysql</groupId>
+	    <artifactId>mysql-connector-java</artifactId>
+	    <version>${mysqlj.version}</version>
+	</dependency>
+	
   </dependencies>
   
   <build>
@@ -122,8 +152,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
     </plugins>

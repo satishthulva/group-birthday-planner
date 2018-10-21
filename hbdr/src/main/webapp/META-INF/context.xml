@@ -8,10 +8,4 @@
 <!-- 	Reminder mail will be sent in these many days in advance -->
 	<Environment name="param/DefaultReminderDays" value="4" type="java.lang.Integer" override="false" />
 
-<!-- Database configuration -->
-<Resource name="jdbc/PlannerDB" auth="Container" type="javax.sql.DataSource"
-               maxTotal="100" maxIdle="30" maxWaitMillis="10000"
-               username="planner" password="planner@27@" driverClassName="com.mysql.jdbc.Driver"
-               url="jdbc:mysql://localhost:3306/planner_db"/>
-
 </Context>
