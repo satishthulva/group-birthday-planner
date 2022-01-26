@@ -16,7 +16,7 @@
     <hikaricp.version>3.1.0</hikaricp.version>
     <jdbi.version>3.5.1</jdbi.version>
     <flyway.version>5.2.0</flyway.version>
-    <mysqlj.version>8.0.12</mysqlj.version>
+    <mysqlj.version>8.0.16</mysqlj.version>
   </properties>
   
   <dependencies>
