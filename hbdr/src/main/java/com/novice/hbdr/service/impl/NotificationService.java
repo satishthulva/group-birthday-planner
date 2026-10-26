@@ -1,12 +1,15 @@
 package com.novice.hbdr.service.impl;
 
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.mail.Address;
@@ -29,7 +32,6 @@ import com.novice.hbdr.Configuration;
 import com.novice.hbdr.datamodels.Group;
 import com.novice.hbdr.datamodels.GroupDetails;
 import com.novice.hbdr.datamodels.GroupID;
-import com.novice.hbdr.datamodels.Month;
 import com.novice.hbdr.datamodels.Person;
 import com.novice.hbdr.service.GroupService;
 
@@ -45,10 +47,15 @@ public class NotificationService implements Runnable {
 	private final Configuration configuration;
 
 	/**
-	 * Stores the date when the last reminder sending attempt was made, for each group
+	 * Records who has been reminded about which birthday occurrence, in which group
 	 */
-	private final Map<GroupID, String> lastReminderRunDate = new ConcurrentHashMap<>();
-	
+	private final Set<NotificationKey> notified = ConcurrentHashMap.newKeySet();
+
+	/**
+	 * indicates whether reminders already sent before the service started are accounted for
+	 */
+	private volatile boolean seeded = false;
+
 	@Inject
 	public NotificationService(GroupService groupService, Configuration configuration) {
 		this.groupService = groupService;
@@ -61,114 +68,155 @@ public class NotificationService implements Runnable {
 	private boolean isShutdown = false;
 
 	/**
-	 * Find whether the notification service tried to find whether there is a
-	 * need to send notification for the group for given day or not ?
-	 * 
-	 * @param date
-	 *            Date of interest
-	 * @param groupID
-	 *            Unique id of the group
-	 * @return <code>true</code>, if notification service tried to find whether
-	 *         there is a need to send notification for the group for given day
-	 *         or not ?
+	 * Find the birthdays within reminder period in each group and remind the
+	 * members who are not reminded about them yet
+	 *
+	 * @param today
+	 *            The day to send reminders for
 	 */
-	private boolean isNotifierRunForDay(Date date, GroupID groupID) {
-	    String runDate = lastReminderRunDate.get(groupID);
-	    String currentDate = toDateString(date);
-	    return currentDate.equals(runDate);
-	}
+	void sendNotification(Calendar today) {
+		LocalDate todayDate = toLocalDate(today);
+		notified.removeIf(key -> key.occurrenceDate.isBefore(todayDate));
 
-	/**
-	 * Register that the notifier is run for the day for given group
-	 * 
-	 * @param date
-	 *            Date of interest
-	 * @param groupID
-	 *            Unique id of the group
-	 */
-	private void registerNotifierRunForDay(Date date, GroupID groupID) {
-		String dateString = toDateString(date);
-		lastReminderRunDate.put(groupID, dateString);
-	}
+		List<Group> groups = groupService.findGroups();
 
-	/**
-	 * Find the groups with notification to be sent and send the notification
-	 */
-	private void sendNotification() {
-		Date date = new Date();
-		for (Group group : groupService.findGroups()) {
-			if (isNotifierRunForDay(date, group.getId()))
-				continue;
-
-			runReminder(group);
-
-			registerNotifierRunForDay(date, group.getId());
+		if (!seeded) {
+			seedNotified(groups, today);
+			seeded = true;
 		}
-	}
 
-	/**
-	 * Send birthday reminder email for the relevant people in group, if there
-	 * is birthday coming up soon
-	 * 
-	 * @param group
-	 *            friend group
-	 */
-	private void runReminder(Group group) {
-		int reminderPeriodInDays = group.getReminderPeriodInDays();
-		if (reminderPeriodInDays == -1)
-			reminderPeriodInDays = configuration.findDefaultReminderPeriod();
+		for (Group group : groups) {
+			int reminderPeriodInDays = findReminderPeriod(group);
 
-		List<Person> persons = group.getMembers();
+			for (Person bdayPerson : group.getMembers()) {
+				int daysLeft = daysUntilBirthday(bdayPerson, today);
+				if (daysLeft < 1 || daysLeft > reminderPeriodInDays)
+					continue;
 
-		for (int i = persons.size(); i-- > 0;) {
-			Person person = persons.get(i);
-
-			if (isPersonBirthdaySoon(person, reminderPeriodInDays)) {
-				remindAboutPersonBirthday(persons, person, reminderPeriodInDays);
+				remindAboutPersonBirthday(group, bdayPerson, todayDate.plusDays(daysLeft), daysLeft);
 			}
 		}
 	}
 
 	/**
-	 * It's <code>bdayPerson</code>s' birthday in
-	 * <code>reminderPeriodInDays</code>. Remind everybody in that persons'
-	 * clique.
-	 * 
-	 * @param all
-	 *            All persons in the bday persons' clique( including that person
-	 *            )
+	 * Treat current members as already reminded about the birthdays whose
+	 * reminder period started before today, so that a restart doesn't remind
+	 * them again. Birthdays whose reminder period starts today are left out, so
+	 * they are reminded as usual.
+	 *
+	 * @param groups
+	 *            All friend groups
+	 * @param today
+	 *            The day the service started sending reminders
+	 */
+	private void seedNotified(List<Group> groups, Calendar today) {
+		LocalDate todayDate = toLocalDate(today);
+
+		for (Group group : groups) {
+			int reminderPeriodInDays = findReminderPeriod(group);
+
+			for (Person bdayPerson : group.getMembers()) {
+				int daysLeft = daysUntilBirthday(bdayPerson, today);
+				if (daysLeft < 1 || daysLeft >= reminderPeriodInDays)
+					continue;
+
+				LocalDate occurrenceDate = todayDate.plusDays(daysLeft);
+				for (Person p : group.getMembers()) {
+					if (!p.getEmail().equals(bdayPerson.getEmail()))
+						notified.add(toKey(group, bdayPerson, occurrenceDate, p.getEmail()));
+				}
+			}
+		}
+	}
+
+	/**
+	 * @return Number of days in advance the reminder has to be sent for given group
+	 */
+	private int findReminderPeriod(Group group) {
+		int reminderPeriodInDays = group.getReminderPeriodInDays();
+		if (reminderPeriodInDays == -1)
+			reminderPeriodInDays = configuration.findDefaultReminderPeriod();
+
+		return reminderPeriodInDays;
+	}
+
+	/**
+	 * It's <code>bdayPerson</code>s' birthday in <code>daysLeft</code> days.
+	 * Remind everybody in that persons' clique who is not reminded yet.
+	 *
+	 * @param group
+	 *            The bday persons' clique
 	 * @param bdayPerson
 	 *            The person of interest
-	 * @param reminderPeriodInDays
-	 *            Number of days in advance to send notification email
+	 * @param occurrenceDate
+	 *            Date of the upcoming birthday
+	 * @param daysLeft
+	 *            Number of days left till the birthday
 	 */
-	private void remindAboutPersonBirthday(List<Person> all, Person bdayPerson, int reminderPeriodInDays) {
+	private void remindAboutPersonBirthday(Group group, Person bdayPerson, LocalDate occurrenceDate, int daysLeft) {
 		List<String> emails = new ArrayList<>();
 
-		for (int i = all.size(); i-- > 0;) {
-			Person p = all.get(i);
-			if (p.equals(bdayPerson))
+		for (Person p : group.getMembers()) {
+			if (p.getEmail().equals(bdayPerson.getEmail()))
 				continue;
 
-			emails.add(p.getEmail());
+			if (!notified.contains(toKey(group, bdayPerson, occurrenceDate, p.getEmail())))
+				emails.add(p.getEmail());
 		}
 
-		sendEmail(bdayPerson, emails, reminderPeriodInDays);
+		if (emails.isEmpty())
+			return;
+
+		deliver(bdayPerson, emails, daysLeft);
+
+		// recorded regardless of delivery outcome, to remind at most once
+		for (String email : emails)
+			notified.add(toKey(group, bdayPerson, occurrenceDate, email));
+	}
+
+	/**
+	 * @return Key identifying the reminder to <code>recipientEmail</code> about given occurrence of <code>bdayPerson</code>s' birthday
+	 */
+	private NotificationKey toKey(Group group, Person bdayPerson, LocalDate occurrenceDate, String recipientEmail) {
+		return new NotificationKey(group.getId(), bdayPerson.getEmail(), occurrenceDate, recipientEmail);
+	}
+
+	/**
+	 * @return Day represented by given calendar instance
+	 */
+	private LocalDate toLocalDate(Calendar calendar) {
+		return LocalDate.of(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1,
+				calendar.get(Calendar.DAY_OF_MONTH));
+	}
+
+	/**
+	 * Deliver reminder about the upcoming birthday of bdayPerson to given
+	 * emails. Package-private so tests can intercept the delivery.
+	 *
+	 * @param bdayPerson
+	 *            Person whose birthday is coming up soon
+	 * @param recipientEmails
+	 *            Emails of people to deliver notification email
+	 * @param daysLeft
+	 *            Number of days left till the birthday
+	 */
+	void deliver(Person bdayPerson, List<String> recipientEmails, int daysLeft) {
+		sendEmail(bdayPerson, recipientEmails, daysLeft);
 	}
 
 	/**
 	 * Send reminder email to all given emails about the upcoming birthday of
 	 * bdayPerson
-	 * 
+	 *
 	 * @param bdayPerson
 	 *            Person whose birthday is coming up soon
 	 * @param emails
 	 *            Emails of people to deliver notification email
-	 * @param reminderPeriodInDays
-	 *            Number of days in advance to send reminder email
+	 * @param daysLeft
+	 *            Number of days left till the birthday
 	 */
-	private void sendEmail(Person bdayPerson, List<String> emails, int reminderPeriodInDays) {
-		Email email = prepareEmail(bdayPerson, emails, reminderPeriodInDays);
+	private void sendEmail(Person bdayPerson, List<String> emails, int daysLeft) {
+		Email email = prepareEmail(bdayPerson, emails, daysLeft);
 		Session session = configuration.getMailer().getSession();
 
 		MimeMessage message = new MimeMessage(session);
@@ -226,8 +274,8 @@ public class NotificationService implements Runnable {
 	 * @return Prepare mail content to send reminder mail for
 	 *         <code>bdayPerson</code>s' birthday
 	 */
-	private Email prepareEmail(Person bdayPerson, List<String> emails, int reminderPeriodInDays) {
-		String subject = bdayPerson.getName() + "s' Birthday in " + reminderPeriodInDays + " days !";
+	private Email prepareEmail(Person bdayPerson, List<String> emails, int daysLeft) {
+		String subject = bdayPerson.getName() + "s' Birthday in " + daysLeft + " days !";
 
 		String body = "<p>Hey folks,<br/><br/>It's <b>" + bdayPerson.getName() + "</b>s' birthday on <b>"
 				+ bdayPerson.getBirthday().getDayOfMonth() + ", " + bdayPerson.getBirthday().getMonth().name()
@@ -236,53 +284,6 @@ public class NotificationService implements Runnable {
 				+ "<p>--<br/>Thanks & Regards,<br/>Birthday Reminder Daemon!<br/>";
 
 		return new Email(subject, body, emails);
-	}
-
-	/**
-	 * Find out whether it's given persons' birthday in
-	 * <code>reminderPeriodInDays</code> days.
-	 * 
-	 * @param person
-	 *            Person of interest
-	 * @param reminderPeriodInDays
-	 *            Number of days in advance to the persons' birthday
-	 * 
-	 *            NOTE : there is an assumption that it won't be more than 27
-	 *            days
-	 * 
-	 * @return <code>true</code>, if it's given persons' birthday in
-	 *         <code>reminderPeriodInDays</code> days. <code>false</code>,
-	 *         otherwise
-	 */
-	private boolean isPersonBirthdaySoon(Person person, int reminderPeriodInDays) {
-		Calendar todayC = Calendar.getInstance();
-
-		Calendar birthdayC = Calendar.getInstance();
-		birthdayC.set(Calendar.MONTH, person.getBirthday().getMonth().ordinal());
-		birthdayC.set(Calendar.DAY_OF_MONTH, person.getBirthday().getDayOfMonth());
-
-		if (!todayC.before(birthdayC))
-			return false;
-
-		int todayMonth = todayC.get(Calendar.MONTH);
-		int bdayMonth = birthdayC.get(Calendar.MONTH);
-
-		int monthDiff = bdayMonth - todayMonth;
-
-		if (monthDiff > 1)
-			return false;
-
-		int daysLeftTillBDay = 0;
-
-		if (monthDiff == 0) {
-			daysLeftTillBDay = birthdayC.get(Calendar.DAY_OF_MONTH) - todayC.get(Calendar.DAY_OF_MONTH);
-		} else {
-			daysLeftTillBDay = Month.values()[todayMonth].getNumberOfDaysInMonth(todayC.get(Calendar.YEAR))
-					- todayC.get(Calendar.DAY_OF_MONTH) + 1;
-			daysLeftTillBDay += birthdayC.get(Calendar.DAY_OF_MONTH) - 1;
-		}
-
-		return daysLeftTillBDay == reminderPeriodInDays;
 	}
 
 	/**
@@ -335,6 +336,43 @@ public class NotificationService implements Runnable {
 			return people;
 		}
 
+	}
+
+	/**
+	 * Identifies a reminder sent to a recipient about one occurrence of a
+	 * persons' birthday, in a group
+	 *
+	 * @author satish
+	 */
+	private static final class NotificationKey {
+		private final GroupID groupID;
+		private final String bdayPersonEmail;
+		private final LocalDate occurrenceDate;
+		private final String recipientEmail;
+
+		NotificationKey(GroupID groupID, String bdayPersonEmail, LocalDate occurrenceDate, String recipientEmail) {
+			this.groupID = groupID;
+			this.bdayPersonEmail = bdayPersonEmail;
+			this.occurrenceDate = occurrenceDate;
+			this.recipientEmail = recipientEmail;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(groupID, bdayPersonEmail, occurrenceDate, recipientEmail);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!(obj instanceof NotificationKey))
+				return false;
+			NotificationKey other = (NotificationKey) obj;
+			return Objects.equals(groupID, other.groupID) && Objects.equals(bdayPersonEmail, other.bdayPersonEmail)
+					&& Objects.equals(occurrenceDate, other.occurrenceDate)
+					&& Objects.equals(recipientEmail, other.recipientEmail);
+		}
 	}
 
 	/**
@@ -422,42 +460,54 @@ public class NotificationService implements Runnable {
 	 * 
 	 * @param person	Person of interest
 	 * @param reminderPeriodInDays	Number of days in advance to the persons' birthday
-	 *            NOTE : there is an assumption that it won't be more than 27
-	 *            days
-	 * 
+	 *
 	 * @return <code>true</code>, if it's given persons' birthday in less than
 	 *         <code>reminderPeriodInDays</code> days. <code>false</code>,
 	 *         otherwise
 	 */
 	private boolean isPersonBirthdayWithInReminderPeriod(Person person, int reminderPeriodInDays) {
-		Calendar todayC = Calendar.getInstance();
+		int daysLeftTillBDay = daysUntilBirthday(person, Calendar.getInstance());
+		return daysLeftTillBDay >= 0 && daysLeftTillBDay <= reminderPeriodInDays;
+	}
 
-		Calendar birthdayC = Calendar.getInstance();
-		birthdayC.set(Calendar.MONTH, person.getBirthday().getMonth().ordinal());
-		birthdayC.set(Calendar.DAY_OF_MONTH, person.getBirthday().getDayOfMonth());
+	/**
+	 * Find the number of days left till the next occurrence of given persons'
+	 * birthday, this year or the next.
+	 *
+	 * @param person
+	 *            Person of interest
+	 * @param today
+	 *            The day to count from
+	 * @return number of days left till the birthday, <code>-1</code> if the
+	 *         birthday is today
+	 */
+	int daysUntilBirthday(Person person, Calendar today) {
+		LocalDate todayDate = toLocalDate(today);
 
-		if (!todayC.before(birthdayC))
-			return false;
+		LocalDate birthday = birthdayInYear(person, todayDate.getYear());
+		if (birthday.equals(todayDate))
+			return -1;
 
-		int todayMonth = todayC.get(Calendar.MONTH);
-		int bdayMonth = birthdayC.get(Calendar.MONTH);
+		if (birthday.isBefore(todayDate))
+			birthday = birthdayInYear(person, todayDate.getYear() + 1);
 
-		int monthDiff = bdayMonth - todayMonth;
+		return (int) ChronoUnit.DAYS.between(todayDate, birthday);
+	}
 
-		if (monthDiff > 1)
-			return false;
-
-		int daysLeftTillBDay = 0;
-
-		if (monthDiff == 0) {
-			daysLeftTillBDay = birthdayC.get(Calendar.DAY_OF_MONTH) - todayC.get(Calendar.DAY_OF_MONTH);
-		} else {
-			daysLeftTillBDay = Month.values()[todayMonth].getNumberOfDaysInMonth(todayC.get(Calendar.YEAR))
-					- todayC.get(Calendar.DAY_OF_MONTH) + 1;
-			daysLeftTillBDay += birthdayC.get(Calendar.DAY_OF_MONTH) - 1;
-		}
-
-		return daysLeftTillBDay >=0 && daysLeftTillBDay <= reminderPeriodInDays;
+	/**
+	 * Find given persons' birthday in given year. A day beyond the end of the
+	 * month rolls over to the next month, so 29th February is 1st March in a
+	 * non-leap year.
+	 *
+	 * @param person
+	 *            Person of interest
+	 * @param year
+	 *            Year of interest
+	 * @return given persons' birthday in given year
+	 */
+	private LocalDate birthdayInYear(Person person, int year) {
+		return LocalDate.of(year, person.getBirthday().getMonth().ordinal() + 1, 1)
+				.plusDays(person.getBirthday().getDayOfMonth() - 1);
 	}
 	
 	/*
@@ -468,7 +518,7 @@ public class NotificationService implements Runnable {
 	@Override
 	public void run() {
 		while (!isShutdown) {
-			sendNotification();
+			sendNotification(Calendar.getInstance());
 
 			try {
 				Thread.sleep(1000 * 60 * 15);// sleep for 15 minutes and send
@@ -486,19 +536,4 @@ public class NotificationService implements Runnable {
 		this.isShutdown = true;
 	}
 
-	/**
-	 * Return the string representation of day in the format YYYY-MM-DD
-	 * @param date date representing a time instant
-	 * @return the string representation of day in the format YYYY-MM-DD
-	 */
-	private String toDateString(Date date)
-	{
-	    Calendar calendar = Calendar.getInstance();
-	    calendar.setTime(date);
-	    
-	    SimpleDateFormat format = new SimpleDateFormat("YYYY-MM-DD");
-	    
-	    return format.format(date);
-	}
-	
 }
