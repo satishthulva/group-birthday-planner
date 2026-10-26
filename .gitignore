@@ -3,3 +3,4 @@ hbdr/.gitignore
 hbdr/.project
 hbdr/.settings
 hbdr/src/main/webapp/vendor
+hbdr/target/
